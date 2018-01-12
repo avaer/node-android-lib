@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <p align="center">
   <a href="https://nodejs.org/">
     <img
@@ -11,17 +12,26 @@
 Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine. For
 more information on using Node.js, see the
 [Node.js Website][].
+=======
+# Node.js Android lib
 
-The Node.js project is supported by the
-[Node.js Foundation](https://nodejs.org/en/foundation/). Contributions,
-policies, and releases are managed under an
-[open governance model](./GOVERNANCE.md).
+This repo lets you build `libnode.so` for Android (`arm64`).
+>>>>>>> Add README.md
 
-**This project is bound by a [Code of Conduct][].**
+You only need this if you want to build an Android app that runs a true native `node` via the Java Native Interface, and you know what you're doing.
 
+If you just want to use `node` on your Android, get it on `Termux`. If you just want to run some JS, use `WebView`.
 
-# Table of Contents
+## Instructions
 
+1. Get an Android `arm64` device. I use a Pixel.
+1. Get [Termux](https://termux.com/).
+1. Get a shell into Termux.
+1. `git clone` this repo
+1. `cd` into this repo
+1. Run:
+
+<<<<<<< HEAD
 * [Support](#support)
 * [Release Types](#release-types)
   * [Download](#download)
@@ -636,3 +646,12 @@ Previous releases may also have been signed with one of the following GPG keys:
 [Working Groups]: https://github.com/nodejs/TSC/blob/master/WORKING_GROUPS.md
 [Strategic Initiatives]: https://github.com/nodejs/TSC/blob/master/Strategic-Initiatives.md
 [#node.js channel on chat.freenode.net]: https://webchat.freenode.net?channels=node.js&uio=d4
+=======
+```sh
+./configure --shared
+LDFLAGS="-llog" make -j2 # this will take like an hour
+file ./out/Release/lib.target/libnode.so.59 # this is your output library; copy it somewhere
+```
+
+Mostly this repo has some light hacks that made the node build compatible with the Android native toolchain.
+>>>>>>> Add README.md
