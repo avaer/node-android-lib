@@ -351,7 +351,7 @@
             '<(INTERMEDIATE_DIR)/snapshot.cc',
           ],
           'variables': {
-            'mksnapshot_flags': [],
+            'mksnapshot_flags': ['--nodebug_code'],
             'conditions': [
               ['v8_random_seed!=0', {
                 'mksnapshot_flags': ['--random-seed', '<(v8_random_seed)'],
@@ -452,7 +452,7 @@
                 '<(mksnapshot_exec)',
               ],
               'variables': {
-                'mksnapshot_flags': [],
+                'mksnapshot_flags': ['--nodebug_code'],
                 'conditions': [
                   ['v8_random_seed!=0', {
                     'mksnapshot_flags': ['--random-seed', '<(v8_random_seed)'],
