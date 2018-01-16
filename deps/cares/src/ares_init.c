@@ -1237,7 +1237,7 @@ static int get_DNS_AdaptersAddresses(char **outptr)
         /* Allocate room for another address, if necessary, else skip. */
         if(addressesIndex == addressesSize) {
           const size_t newSize = addressesSize + 4;
-          Address * const newMem =
+          Address * const newMem = 
             (Address*)ares_realloc(addresses, sizeof(Address) * newSize);
           if(newMem == NULL) {
             continue;
@@ -1272,11 +1272,6 @@ static int get_DNS_AdaptersAddresses(char **outptr)
       }
       else if (namesrvr.sa->sa_family == AF_INET6)
       {
-        /* Windows apparently always reports some IPv6 DNS servers that
-         * prefixed with fec0:0:0:ffff. These ususally do not point to
-         * working DNS servers, so we ignore them. */
-        if (strncmp(addresses[addressesIndex].text, "fec0:0:0:ffff:", 14) == 0)
-          continue;
         if (memcmp(&namesrvr.sa6->sin6_addr, &ares_in6addr_any,
                    sizeof(namesrvr.sa6->sin6_addr)) == 0)
           continue;
@@ -1304,7 +1299,7 @@ static int get_DNS_AdaptersAddresses(char **outptr)
           /* Save the address as the next element in addresses. */
           addresses[addressesIndex].metric =
             getBestRouteMetric(&ipaaEntry->Luid,
-                               (SOCKADDR_INET*)(namesrvr.sa),
+                               (SOCKADDR_INET*)(namesrvr.sa), 
                                ipaaEntry->Ipv6Metric);
         }
         else
@@ -1354,7 +1349,7 @@ static int get_DNS_AdaptersAddresses(char **outptr)
 
 done:
   ares_free(addresses);
-
+  
   if (ipaa)
     ares_free(ipaa);
 
@@ -1458,7 +1453,7 @@ static size_t next_suffix(const char** list, const size_t advance)
  *
  * Returns 1 and sets *outptr when returning a dynamically allocated string.
  *
- * Implementation supports Windows Server 2003 and newer
+ * Implementation supports Windows Server 2003 and newer 
  */
 static int get_SuffixList_Windows(char **outptr)
 {
