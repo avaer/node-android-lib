@@ -103,6 +103,7 @@
         'src/inet_ntop.c',
         'src/ares_inet_net_pton.h',
         'src/setup_once.h',
+        'src/ares_android.c',
       ],
       'conditions': [
         [ 'library=="static_library"', {
@@ -111,7 +112,7 @@
           'defines': [ 'CARES_BUILDING_LIBRARY' ]
         }],
         [ 'OS=="win"', {
-          'defines': [ 'CARES_PULL_WS2TCPIP_H=1' ],
+          'defines': [ 'CARES_PULL_WS2TCPIP_H=1', 'ANDROID=1' ],
           'include_dirs': [ 'config/win32' ],
           'sources': [
             'src/config-win32.h',
@@ -133,7 +134,7 @@
             '-Wextra',
             '-Wno-unused-parameter'
           ],
-          'defines': [ 'HAVE_CONFIG_H' ],
+          'defines': [ 'HAVE_CONFIG_H', 'ANDROID=1' ],
         }],
         [ 'OS not in "win android"', {
           'cflags': [

@@ -68,6 +68,10 @@
 #  include <netinet/in.h>
 #endif
 
+#if defined(ANDROID) || defined(__ANDROID__)
+#include <jni.h>
+#endif
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -306,6 +310,14 @@ CARES_EXTERN int ares_library_init_mem(int flags,
                                        void *(*amalloc)(size_t size),
                                        void (*afree)(void *ptr),
                                        void *(*arealloc)(void *ptr, size_t size));
+
+#if defined(ANDROID) || defined(__ANDROID__)
+CARES_EXTERN void ares_library_init_jvm(JavaVM *jvm);
+CARES_EXTERN int ares_library_init_android(jobject connectivity_manager);
+CARES_EXTERN int ares_library_android_initialized(void);
+CARES_EXTERN char **ares_get_android_server_list(size_t max_servers, size_t *num_servers);
+CARES_EXTERN void ares_library_cleanup_android(void);
+#endif
 
 CARES_EXTERN int ares_library_initialized(void);
 
