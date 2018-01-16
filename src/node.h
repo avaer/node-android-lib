@@ -215,6 +215,23 @@ NODE_EXTERN void Init(int* argc,
 class IsolateData;
 class Environment;
 
+class NodeService {
+  public:
+
+  v8::Isolate *isolate;
+  Environment *env;
+  v8::Eternal<v8::Context> context;
+
+  NODE_EXTERN NodeService(int argc, char** argv);
+  NODE_EXTERN ~NodeService();
+  NODE_EXTERN void Scope(void (*fn)());
+  NODE_EXTERN bool Tick();
+
+  NODE_EXTERN v8::Isolate *GetIsolate();
+  NODE_EXTERN Environment *GetEnvironment();
+  NODE_EXTERN v8::Local<v8::Context> GetContext();
+};
+
 class MultiIsolatePlatform : public v8::Platform {
  public:
   virtual ~MultiIsolatePlatform() { }
