@@ -24,6 +24,7 @@
 static JavaVM *android_jvm = NULL;
 static jobject android_connectivity_manager = NULL;
 
+<<<<<<< HEAD
 /* ConnectivityManager.getActiveNetwork */
 static jmethodID android_cm_active_net_mid = NULL;
 /* ConnectivityManager.getLinkProperties */
@@ -37,6 +38,8 @@ static jmethodID android_list_get_mid = NULL;
 /* InetAddress.getHostAddress */
 static jmethodID android_ia_host_addr_mid = NULL;
 
+=======
+>>>>>>> Update c-ares lib dep
 static jclass jni_get_class(JNIEnv *env, const char *path)
 {
   jclass cls = NULL;
@@ -83,11 +86,17 @@ int ares_library_init_android(jobject connectivity_manager)
   JNIEnv *env = NULL;
   int need_detatch = 0;
   int res;
+<<<<<<< HEAD
   int ret = ARES_ENOTINITIALIZED;
   jclass obj_cls = NULL;
 
   if (android_jvm == NULL)
     goto cleanup;
+=======
+
+  if (android_jvm == NULL)
+    return ARES_ENOTINITIALIZED;
+>>>>>>> Update c-ares lib dep
 
   res = (*android_jvm)->GetEnv(android_jvm, (void **)&env, JNI_VERSION_1_6);
   if (res == JNI_EDETACHED)
@@ -97,6 +106,7 @@ int ares_library_init_android(jobject connectivity_manager)
     need_detatch = 1;
   }
   if (res != JNI_OK || env == NULL)
+<<<<<<< HEAD
     goto cleanup;
 
   android_connectivity_manager =
@@ -182,6 +192,16 @@ done:
     (*android_jvm)->DetachCurrentThread(android_jvm);
 
   return ret;
+=======
+    return ARES_ENOTINITIALIZED;
+
+  android_connectivity_manager = (*env)->NewGlobalRef(env, connectivity_manager);
+
+  if (need_detatch)
+    (*android_jvm)->DetachCurrentThread(android_jvm);
+
+  return ARES_SUCCESS;
+>>>>>>> Update c-ares lib dep
 }
 
 int ares_library_android_initialized(void)
@@ -210,6 +230,7 @@ void ares_library_cleanup_android(void)
   if (res != JNI_OK || env == NULL)
     return;
 
+<<<<<<< HEAD
   android_cm_active_net_mid = NULL;
   android_cm_link_props_mid = NULL;
   android_lp_dns_servers_mid = NULL;
@@ -217,6 +238,8 @@ void ares_library_cleanup_android(void)
   android_list_get_mid = NULL;
   android_ia_host_addr_mid = NULL;
 
+=======
+>>>>>>> Update c-ares lib dep
   (*env)->DeleteGlobalRef(env, android_connectivity_manager);
   android_connectivity_manager = NULL;
 
@@ -232,7 +255,15 @@ char **ares_get_android_server_list(size_t max_servers,
   jobject link_properties = NULL;
   jobject server_list = NULL;
   jobject server = NULL;
+<<<<<<< HEAD
   jstring str = NULL;
+=======
+  jstring str;
+  jclass obj_cls;
+  jmethodID obj_mid;
+  jclass list_cls;
+  jmethodID list_mid;
+>>>>>>> Update c-ares lib dep
   jint nserv;
   const char *ch_server_address;
   int res;
@@ -246,6 +277,7 @@ char **ares_get_android_server_list(size_t max_servers,
     return NULL;
   }
 
+<<<<<<< HEAD
   if (android_cm_active_net_mid == NULL || android_cm_link_props_mid == NULL ||
       android_lp_dns_servers_mid == NULL || android_list_size_mid == NULL ||
       android_list_get_mid == NULL || android_ia_host_addr_mid == NULL)
@@ -253,6 +285,8 @@ char **ares_get_android_server_list(size_t max_servers,
     return NULL;
   }
 
+=======
+>>>>>>> Update c-ares lib dep
   res = (*android_jvm)->GetEnv(android_jvm, (void **)&env, JNI_VERSION_1_6);
   if (res == JNI_EDETACHED)
   {
@@ -280,6 +314,7 @@ char **ares_get_android_server_list(size_t max_servers,
        String ha = ia.getHostAddress();
      }
 
+<<<<<<< HEAD
      Note: The JNI ConnectivityManager object and all method IDs were previously
            initialized in ares_library_init_android.
    */
@@ -301,29 +336,104 @@ char **ares_get_android_server_list(size_t max_servers,
     goto done;
 
   nserv = (*env)->CallIntMethod(env, server_list, android_list_size_mid);
+=======
+     Note: The JNI ConnectivityManager object was previously initialized in
+           ares_library_init_android.
+   */
+
+  /* ConnectivityManager in API 1. */
+  obj_cls = jni_get_class(env, "android/net/ConnectivityManager");
+  if (obj_cls == NULL)
+    goto done;
+  /* ConnectivityManager.getActiveNetwork in API 23. */
+  obj_mid = jni_get_method_id(env, obj_cls, "getActiveNetwork",
+                              "()Landroid/net/Network;");
+  if (obj_mid == NULL)
+    goto done;
+  active_network = (*env)->CallObjectMethod(env, android_connectivity_manager,
+                                            obj_mid);
+  if (active_network == NULL)
+    goto done;
+
+  /* ConnectivityManager.getLinkProperties in API 21. */
+  obj_mid = jni_get_method_id(env, obj_cls, "getLinkProperties",
+            "(Landroid/net/Network;)Landroid/net/LinkProperties;");
+  if (obj_mid == NULL)
+    goto done;
+  link_properties = (*env)->CallObjectMethod(env, android_connectivity_manager,
+                                             obj_mid, active_network);
+  if (link_properties == NULL)
+    goto done;
+
+  /* LinkProperties in API 21. */
+  obj_cls = jni_get_class(env, "android/net/LinkProperties");
+  if (obj_cls == NULL)
+    goto done;
+  /* getDnsServers in API 21. */
+  obj_mid = jni_get_method_id(env, obj_cls, "getDnsServers",
+                              "()Ljava/util/List;");
+  if (obj_mid == NULL)
+    goto done;
+  server_list = (*env)->CallObjectMethod(env, link_properties, obj_mid);
+  if (server_list == NULL)
+    goto done;
+
+  list_cls = jni_get_class(env, "java/util/List");
+  if (list_cls == NULL)
+    goto done;
+  list_mid = jni_get_method_id(env, list_cls, "size", "()I");
+  if (list_mid == NULL)
+    goto done;
+  nserv = (*env)->CallIntMethod(env, server_list, list_mid);
+>>>>>>> Update c-ares lib dep
   if (nserv > (jint)max_servers)
     nserv = (jint)max_servers;
   if (nserv <= 0)
     goto done;
   *num_servers = (size_t)nserv;
+<<<<<<< HEAD
 
   dns_list = ares_malloc(sizeof(*dns_list)*(*num_servers));
   for (i=0; i<*num_servers; i++)
   {
     server = (*env)->CallObjectMethod(env, server_list, android_list_get_mid,
                                       (jint)i);
+=======
+  list_mid = jni_get_method_id(env, list_cls, "get", "(I)Ljava/lang/Object;");
+  if (list_mid == NULL)
+    goto done;
+
+  obj_cls = jni_get_class(env, "java/net/InetAddress");
+  if (obj_cls == NULL)
+    goto done;
+  obj_mid = jni_get_method_id(env, obj_cls, "getHostAddress",
+                              "()Ljava/lang/String;");
+  if (obj_mid == NULL)
+    goto done;
+  dns_list = ares_malloc(sizeof(*dns_list)*(*num_servers));
+  for (i=0; i<*num_servers; i++)
+  {
+    server = (*env)->CallObjectMethod(env, server_list, list_mid, (jint)i);
+>>>>>>> Update c-ares lib dep
     dns_list[i] = ares_malloc(64);
     dns_list[i][0] = 0;
     if (server == NULL)
     {
       continue;
     }
+<<<<<<< HEAD
     str = (*env)->CallObjectMethod(env, server, android_ia_host_addr_mid);
     ch_server_address = (*env)->GetStringUTFChars(env, str, 0);
     strncpy(dns_list[i], ch_server_address, 64);
     (*env)->ReleaseStringUTFChars(env, str, ch_server_address);
     (*env)->DeleteLocalRef(env, str);
     (*env)->DeleteLocalRef(env, server);
+=======
+    str = (*env)->CallObjectMethod(env, server, obj_mid);
+    ch_server_address = (*env)->GetStringUTFChars(env, str, 0);
+    strncpy(dns_list[i], ch_server_address, 64);
+    (*env)->ReleaseStringUTFChars(env, str, ch_server_address);
+>>>>>>> Update c-ares lib dep
   }
 
 done:
@@ -341,7 +451,11 @@ done:
     (*android_jvm)->DetachCurrentThread(android_jvm);
   return dns_list;
 }
+<<<<<<< HEAD
 #else
 /* warning: ISO C forbids an empty translation unit */
 typedef int dummy_make_iso_compilers_happy;
+=======
+
+>>>>>>> Update c-ares lib dep
 #endif

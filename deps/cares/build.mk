@@ -67,8 +67,13 @@ OBJS= \
 		src/bitncmp.o \
 		src/inet_net_pton.o \
 		src/inet_ntop.o \
+		src/acountry.o \
+		src/adig.o \
+		src/ahost.o \
+		src/ares_android.o \
 
 CFLAGS += -I. -I$(SRCDIR)/include -DHAVE_CONFIG_H
+CFLAGS += -DANDROID
 
 ARES_CONFIG_OS = $(OS)
 SOEXT = so
