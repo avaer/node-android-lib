@@ -222,7 +222,7 @@ class NodeService {
   Environment *env;
   v8::Eternal<v8::Context> context;
 
-  NODE_EXTERN NodeService(int argc, char** argv);
+  NODE_EXTERN NodeService(int argc, char** argv, void (*initEnv)(NodeService *service));
   NODE_EXTERN ~NodeService();
   NODE_EXTERN void Scope(void (*fn)());
   NODE_EXTERN bool Tick();
