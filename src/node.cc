@@ -73,6 +73,8 @@
 #include "../deps/v8/src/third_party/vtune/v8-vtune.h"
 #endif
 
+// #include "../deps/v8/include/android/log.h"
+
 #include <errno.h>
 #include <fcntl.h>  // _O_RDWR
 #include <limits.h>  // PATH_MAX
@@ -2467,6 +2469,8 @@ static bool ExecuteBootstrapper(Environment* env, Local<Function> bootstrapper,
 
 
 void LoadEnvironment(Environment* env) {
+  // __android_log_print(ANDROID_LOG_INFO, "glesjs", "ANDROID LoadEnvironment 1");
+
   HandleScope handle_scope(env->isolate());
 
   TryCatch try_catch(env->isolate());
@@ -3845,6 +3849,201 @@ int Start(int argc, char** argv) {
   exec_argv = nullptr;
 
   return exit_code;
+}
+
+NodeService::NodeService(int argc, char** argv) {
+  // __android_log_print(ANDROID_LOG_INFO, "glesjs", "ANDROID NodeService 1");
+
+  // Part 1
+  atexit([] () { uv_tty_reset_mode(); });
+  PlatformInit();
+  node::performance::performance_node_start = PERFORMANCE_NOW();
+
+  CHECK_GT(argc, 0);
+
+  // Hack around with the argv pointer. Used for process.title = "blah".
+  argv = uv_setup_args(argc, argv);
+
+  // This needs to run *before* V8::Initialize().  The const_cast is not
+  // optional, in case you're wondering.
+  int exec_argc;
+  const char** exec_argv;
+  Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);
+
+#if HAVE_OPENSSL
+  {
+    std::string extra_ca_certs;
+    if (SafeGetenv("NODE_EXTRA_CA_CERTS", &extra_ca_certs))
+      crypto::UseExtraCaCerts(extra_ca_certs);
+  }
+#ifdef NODE_FIPS_MODE
+  // In the case of FIPS builds we should make sure
+  // the random source is properly initialized first.
+  OPENSSL_init();
+#endif  // NODE_FIPS_MODE
+  // V8 on Windows doesn't have a good source of entropy. Seed it from
+  // OpenSSL's pool.
+  V8::SetEntropySource(crypto::EntropySource);
+#endif  // HAVE_OPENSSL
+
+  v8_platform.Initialize(v8_thread_pool_size);
+  // Enable tracing when argv has --trace-events-enabled.
+  if (trace_enabled) {
+    fprintf(stderr, "Warning: Trace event is an experimental feature "
+            "and could change at any time.\n");
+    v8_platform.StartTracingAgent();
+  }
+  V8::Initialize();
+  node::performance::performance_v8_start = PERFORMANCE_NOW();
+  v8_initialized = true;
+  uv_loop_t* event_loop = uv_default_loop();
+
+
+
+  // Part 2
+  Isolate::CreateParams params;
+  ArrayBufferAllocator allocator;
+  params.array_buffer_allocator = &allocator;
+#ifdef NODE_ENABLE_VTUNE_PROFILING
+  params.code_event_handler = vTune::GetVtuneCodeEventHandler();
+#endif
+
+  isolate = Isolate::New(params);
+  if (isolate == nullptr)
+    abort();  // Signal internal error.
+
+  isolate->AddMessageListener(OnMessage);
+  isolate->SetAbortOnUncaughtExceptionCallback(ShouldAbortOnUncaughtException);
+  isolate->SetAutorunMicrotasks(false);
+  isolate->SetFatalErrorHandler(OnFatalError);
+
+  {
+    Mutex::ScopedLock scoped_lock(node_isolate_mutex);
+    CHECK_EQ(node_isolate, nullptr);
+    node_isolate = isolate;
+  }
+
+  int exit_code;
+  {
+    Locker locker(isolate);
+    Isolate::Scope isolate_scope(isolate);
+    HandleScope handle_scope(isolate);
+    IsolateData *isolate_data = new IsolateData(
+        isolate,
+        event_loop,
+        v8_platform.Platform(),
+        allocator.zero_fill_field());
+    if (track_heap_objects) {
+      isolate->GetHeapProfiler()->StartTrackingHeapObjects(true);
+    }
+
+
+
+    // Part 3
+    {
+      HandleScope handle_scope(isolate);
+      Local<Context> localContext = NewContext(isolate);
+      context.Set(isolate, localContext);
+      Context::Scope context_scope(localContext);
+      env = new Environment(isolate_data, localContext);
+      CHECK_EQ(0, uv_key_create(&thread_local_env));
+      uv_key_set(&thread_local_env, env);
+
+      env->Start(argc, argv, exec_argc, exec_argv, v8_is_profiling);
+
+      const char* path = argc > 1 ? argv[1] : nullptr;
+      StartInspector(env, path, debug_options);
+
+      if (debug_options.inspector_enabled() && !v8_platform.InspectorStarted(env))
+        abort();  // Signal internal error.
+
+      env->set_abort_on_uncaught_exception(abort_on_uncaught_exception);
+
+      if (no_force_async_hooks_checks) {
+        env->async_hooks()->no_force_checks();
+      }
+
+      {
+        Environment::AsyncCallbackScope callback_scope(env);
+        env->async_hooks()->push_async_ids(1, 0);
+        LoadEnvironment(env);
+        env->async_hooks()->pop_async_id(1);
+      }
+
+      env->set_trace_sync_io(trace_sync_io);
+
+      {
+        SealHandleScope seal(isolate);
+        bool more;
+        PERFORMANCE_MARK(env, LOOP_START);
+      }
+    }
+  }
+}
+
+NodeService::~NodeService() {
+  {
+    SealHandleScope seal(isolate);
+    PERFORMANCE_MARK(env, LOOP_EXIT);
+  }
+
+  env->set_trace_sync_io(false);
+
+  EmitExit(env);
+  RunAtExit(env);
+  uv_key_delete(&thread_local_env);
+
+  v8_platform.DrainVMTasks(isolate);
+  v8_platform.CancelVMTasks(isolate);
+  WaitForInspectorDisconnect(env);
+#if defined(LEAK_SANITIZER)
+  __lsan_do_leak_check();
+#endif
+}
+
+void NodeService::Scope(void (*fn)()) {
+  Locker locker(isolate);
+  Isolate::Scope isolate_scope(isolate);
+  HandleScope handle_scope(isolate);
+
+  {
+    HandleScope handle_scope(isolate);
+    Local<Context> localContext = NewContext(isolate);
+    context.Set(isolate, localContext);
+    Context::Scope context_scope(localContext);
+
+    fn();
+  }
+}
+
+Isolate *nodeServiceTickIsolate;
+Environment *nodeServiceTickEnv;
+bool nodeServiceTickResult;
+bool NodeService::Tick() {
+  nodeServiceTickIsolate = isolate;
+  nodeServiceTickEnv = env;
+
+  this->Scope([]() {
+    SealHandleScope seal(nodeServiceTickIsolate);
+
+    uv_run(nodeServiceTickEnv->event_loop(), UV_RUN_DEFAULT);
+
+    v8_platform.DrainVMTasks(nodeServiceTickIsolate);
+
+    nodeServiceTickResult = uv_loop_alive(nodeServiceTickEnv->event_loop());
+  });
+
+  return nodeServiceTickResult;
+}
+
+v8::Isolate *NodeService::GetIsolate() {
+  return isolate;
+}
+Environment *NodeService::GetEnvironment() {
+  return env;
+}
+v8::Local<v8::Context> NodeService::GetContext() {
+  return context.Get(isolate);
 }
 
 // Call built-in modules' _register_<module name> function to
