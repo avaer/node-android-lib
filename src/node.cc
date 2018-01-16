@@ -3851,7 +3851,7 @@ int Start(int argc, char** argv) {
   return exit_code;
 }
 
-NodeService::NodeService(int argc, char** argv) {
+NodeService::NodeService(int argc, char** argv, void (*initEnv)(NodeService *service)) {
   // __android_log_print(ANDROID_LOG_INFO, "glesjs", "ANDROID NodeService 1");
 
   // Part 1
@@ -3966,6 +3966,7 @@ NodeService::NodeService(int argc, char** argv) {
       {
         Environment::AsyncCallbackScope callback_scope(env);
         env->async_hooks()->push_async_ids(1, 0);
+        initEnv(this);
         LoadEnvironment(env);
         env->async_hooks()->pop_async_id(1);
       }
