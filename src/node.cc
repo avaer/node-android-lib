@@ -4669,15 +4669,10 @@ void NodeService::Scope(void (*fn)()) {
   Locker locker(isolate);
   Isolate::Scope isolate_scope(isolate);
   HandleScope handle_scope(isolate);
+  Local<Context> localContext = context.Get(isolate);
+  Context::Scope context_scope(localContext);
 
-  {
-    HandleScope handle_scope(isolate);
-    Local<Context> localContext = NewContext(isolate);
-    context.Set(isolate, localContext);
-    Context::Scope context_scope(localContext);
-
-    fn();
-  }
+  fn();
 }
 
 Isolate *nodeServiceTickIsolate;
