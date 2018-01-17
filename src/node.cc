@@ -4565,8 +4565,8 @@ NodeService::NodeService(int argc, char** argv, void (*initEnv)(NodeService *ser
 
   // Part 2
   Isolate::CreateParams params;
-  ArrayBufferAllocator allocator;
-  params.array_buffer_allocator = &allocator;
+  ArrayBufferAllocator *allocator = new ArrayBufferAllocator();
+  params.array_buffer_allocator = allocator;
 #ifdef NODE_ENABLE_VTUNE_PROFILING
   params.code_event_handler = vTune::GetVtuneCodeEventHandler();
 #endif
@@ -4595,7 +4595,7 @@ NodeService::NodeService(int argc, char** argv, void (*initEnv)(NodeService *ser
         isolate,
         event_loop,
         v8_platform.Platform(),
-        allocator.zero_fill_field());
+        allocator->zero_fill_field());
     if (track_heap_objects) {
       isolate->GetHeapProfiler()->StartTrackingHeapObjects(true);
     }
