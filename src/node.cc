@@ -4677,19 +4677,39 @@ void NodeService::Scope(void (*fn)()) {
 
 Isolate *nodeServiceTickIsolate;
 Environment *nodeServiceTickEnv;
+unsigned int nodeServiceTimeout;
 bool nodeServiceTickResult;
-bool NodeService::Tick() {
+bool nodeServiceTimedOut;
+bool NodeService::Tick(int timeout) {
   nodeServiceTickIsolate = isolate;
   nodeServiceTickEnv = env;
+  nodeServiceTimeout = timeout;
 
   this->Scope([]() {
     SealHandleScope seal(nodeServiceTickIsolate);
 
-    uv_run(nodeServiceTickEnv->event_loop(), UV_RUN_DEFAULT);
+    uv_loop_t* loop = nodeServiceTickEnv->event_loop();
 
-    v8_platform.DrainVMTasks(nodeServiceTickIsolate);
+    uv_timer_t timer;
+    uv_timer_init(loop, &timer);
+    nodeServiceTimedOut = false;
+    uv_timer_cb cb = [](uv_timer_t *pTimer) {
+      nodeServiceTimedOut = true;
 
-    nodeServiceTickResult = uv_loop_alive(nodeServiceTickEnv->event_loop());
+      uv_timer_stop(pTimer);
+    };
+    uv_timer_start(&timer, cb, nodeServiceTimeout, 0);
+
+    bool isAlive = false;
+    while (isAlive && !nodeServiceTimedOut) {
+      uv_run(loop, UV_RUN_ONCE);
+
+      v8_platform.DrainVMTasks(nodeServiceTickIsolate);
+
+      isAlive = uv_loop_alive(loop);
+    }
+
+    nodeServiceTickResult = isAlive;
   });
 
   return nodeServiceTickResult;

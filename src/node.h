@@ -225,7 +225,7 @@ class NodeService {
   NODE_EXTERN NodeService(int argc, char** argv, void (*initEnv)(NodeService *service));
   NODE_EXTERN ~NodeService();
   NODE_EXTERN void Scope(void (*fn)());
-  NODE_EXTERN bool Tick();
+  NODE_EXTERN bool Tick(int timeout);
 
   NODE_EXTERN v8::Isolate *GetIsolate();
   NODE_EXTERN Environment *GetEnvironment();
