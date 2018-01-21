@@ -4586,7 +4586,6 @@ NodeService::NodeService(int argc, char** argv, void (*initEnv)(NodeService *ser
     node_isolate = isolate;
   }
 
-  int exit_code;
   {
     Locker locker(isolate);
     Isolate::Scope isolate_scope(isolate);
@@ -4643,9 +4642,13 @@ NodeService::NodeService(int argc, char** argv, void (*initEnv)(NodeService *ser
       }
     }
   }
+
+  uv_timer_init(env->event_loop(), &timer);
 }
 
 NodeService::~NodeService() {
+  // uv_close((uv_handle_t *)(&timer), nullptr);
+
   {
     SealHandleScope seal(isolate);
     PERFORMANCE_MARK(env, LOOP_EXIT);
@@ -4677,36 +4680,34 @@ void NodeService::Scope(void (*fn)()) {
 
 Isolate *nodeServiceTickIsolate;
 Environment *nodeServiceTickEnv;
+uv_timer_t *nodeServiceTimer;
 unsigned int nodeServiceTimeout;
-bool nodeServiceTickResult;
 bool nodeServiceTimedOut;
+bool nodeServiceTickResult;
+void nodeServiceTimeoutCb(uv_timer_t *pTimer) {
+  nodeServiceTimedOut = true;
+
+  uv_timer_stop(pTimer);
+}
 bool NodeService::Tick(int timeout) {
   nodeServiceTickIsolate = isolate;
   nodeServiceTickEnv = env;
+  nodeServiceTimer = &timer;
   nodeServiceTimeout = timeout;
 
   this->Scope([]() {
     SealHandleScope seal(nodeServiceTickIsolate);
 
-    uv_loop_t* loop = nodeServiceTickEnv->event_loop();
-
-    uv_timer_t timer;
-    uv_timer_init(loop, &timer);
     nodeServiceTimedOut = false;
-    uv_timer_cb cb = [](uv_timer_t *pTimer) {
-      nodeServiceTimedOut = true;
+    uv_timer_start(nodeServiceTimer, nodeServiceTimeoutCb, nodeServiceTimeout, 0);
 
-      uv_timer_stop(pTimer);
-    };
-    uv_timer_start(&timer, cb, nodeServiceTimeout, 0);
-
-    bool isAlive = false;
+    bool isAlive = true;
     while (isAlive && !nodeServiceTimedOut) {
-      uv_run(loop, UV_RUN_ONCE);
+      uv_run(nodeServiceTickEnv->event_loop(), UV_RUN_ONCE);
 
       v8_platform.DrainVMTasks(nodeServiceTickIsolate);
 
-      isAlive = uv_loop_alive(loop);
+      isAlive = uv_loop_alive(nodeServiceTickEnv->event_loop());
     }
 
     nodeServiceTickResult = isAlive;
