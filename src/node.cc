@@ -3980,10 +3980,12 @@ NodeService::NodeService(int argc, char** argv, void (*initEnv)(NodeService *ser
     }
   }
 
+  uv_idle_init(env->event_loop(), &idle);
   uv_timer_init(env->event_loop(), &timer);
 }
 
 NodeService::~NodeService() {
+  // __android_log_print(ANDROID_LOG_INFO, "glesjs", "uv loop destroy");
   // uv_close((uv_handle_t *)(&timer), nullptr);
 
   {
@@ -4020,13 +4022,28 @@ Environment *nodeServiceTickEnv;
 uv_timer_t *nodeServiceTimer;
 unsigned int nodeServiceTimeout;
 bool nodeServiceTimedOut;
+volatile bool nodeServiceInterrupted = false;
 bool nodeServiceTickResult;
+bool nodeServiceIsAlive;
 void nodeServiceTimeoutCb(uv_timer_t *pTimer) {
   nodeServiceTimedOut = true;
 
   uv_timer_stop(pTimer);
 }
-bool NodeService::Tick(int timeout) {
+void nodeServiceNopTimeoutCb(uv_timer_t *pTimer) {
+  uv_timer_stop(pTimer);
+}
+void nodeServiceNopIdleCb(uv_idle_t *pIdle) {}
+void NodeService::InterruptScope(void (*fn)()) {
+  nodeServiceInterrupted = true;
+
+  uv_timer_start(&timer, nodeServiceNopTimeoutCb, 0, 0);
+
+  this->Scope(fn);
+
+  nodeServiceInterrupted = false;
+}
+bool NodeService::Tick(unsigned int timeout) {
   nodeServiceTickIsolate = isolate;
   nodeServiceTickEnv = env;
   nodeServiceTimer = &timer;
@@ -4051,6 +4068,26 @@ bool NodeService::Tick(int timeout) {
   });
 
   return nodeServiceTickResult;
+}
+void NodeService::Loop() {
+  nodeServiceTickIsolate = isolate;
+  nodeServiceTickEnv = env;
+  nodeServiceIsAlive = true;
+
+  uv_idle_start(&idle, nodeServiceNopIdleCb); // hold the event loop
+
+  while (nodeServiceIsAlive) {
+    this->Scope([]() {
+      SealHandleScope seal(nodeServiceTickIsolate);
+
+      while (nodeServiceIsAlive && !nodeServiceInterrupted) {
+        uv_run(nodeServiceTickEnv->event_loop(), UV_RUN_ONCE);
+        v8_platform.DrainVMTasks(nodeServiceTickIsolate);
+
+        nodeServiceIsAlive = uv_loop_alive(nodeServiceTickEnv->event_loop());
+      }
+    });
+  }
 }
 
 v8::Isolate *NodeService::GetIsolate() {
