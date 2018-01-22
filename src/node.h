@@ -222,12 +222,15 @@ class NodeService {
   v8::Isolate *isolate;
   Environment *env;
   v8::Eternal<v8::Context> context;
+  uv_idle_t idle;
   uv_timer_t timer;
 
   NODE_EXTERN NodeService(int argc, char** argv, void (*initEnv)(NodeService *service));
   NODE_EXTERN ~NodeService();
   NODE_EXTERN void Scope(void (*fn)());
-  NODE_EXTERN bool Tick(int timeout);
+  NODE_EXTERN void InterruptScope(void (*fn)());
+  NODE_EXTERN bool Tick(unsigned int timeout);
+  NODE_EXTERN void Loop();
 
   NODE_EXTERN v8::Isolate *GetIsolate();
   NODE_EXTERN Environment *GetEnvironment();
