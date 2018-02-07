@@ -3981,7 +3981,7 @@ NodeService::NodeService(int argc, char** argv, void (*initEnv)(NodeService *ser
     }
   }
 
-  uv_idle_init(env->event_loop(), &idle);
+  // uv_idle_init(env->event_loop(), &idle);
   uv_timer_init(env->event_loop(), &timer);
 }
 
@@ -4024,34 +4024,36 @@ uv_timer_t *nodeServiceTimer;
 unsigned int nodeServiceTimeout;
 bool nodeServiceTimedOut;
 bool nodeServiceTickResult;
-bool nodeServiceIsAlive;
-Mutex nodeServiceMutex;
+// bool nodeServiceIsAlive;
+// std::deque<void (*)()> queueCbs;
 void nodeServiceTimeoutCb(uv_timer_t *pTimer) {
   nodeServiceTimedOut = true;
 
   uv_timer_stop(pTimer);
 }
-void nodeServiceUnlockTimeoutCb(uv_timer_t *pTimer) {
+/* void nodeServiceQueueCb(uv_timer_t *pTimer) {
   uv_timer_stop(pTimer);
+  delete pTimer;
 
+  void (*queueCb)() = nullptr;
   {
-    Unlocker unlocker(nodeServiceTickIsolate);
-
-    Mutex::ScopedLock mutexLock(nodeServiceMutex);
+    Mutex::ScopedLock scoped_lock(node_isolate_mutex);
+    queueCb = queueCbs.front();
+    queueCbs.pop_front();
   }
+  queueCb();
 }
 void nodeServiceNopIdleCb(uv_idle_t *pIdle) {}
-void NodeService::InterruptScope(void (*fn)()) {
-  nodeServiceTickIsolate = isolate;
-
+void NodeService::Queue(void (*fn)()) {
   {
-    Mutex::ScopedLock mutexLock(nodeServiceMutex);
-
-    uv_timer_start(&timer, nodeServiceUnlockTimeoutCb, 0, 0);
-
-    this->Scope(fn);
+    Mutex::ScopedLock scoped_lock(node_isolate_mutex);
+    queueCbs.push_back(fn);
   }
-}
+
+  uv_timer_t *pTimer = new uv_timer_t();
+  uv_timer_init(env->event_loop(), pTimer);
+  uv_timer_start(pTimer, nodeServiceQueueCb, 0, 0);
+} */
 bool NodeService::Tick(unsigned int timeout) {
   nodeServiceTickIsolate = isolate;
   nodeServiceTickEnv = env;
@@ -4078,7 +4080,7 @@ bool NodeService::Tick(unsigned int timeout) {
 
   return nodeServiceTickResult;
 }
-void NodeService::Loop() {
+/* void NodeService::Loop() {
   nodeServiceTickIsolate = isolate;
   nodeServiceTickEnv = env;
   nodeServiceIsAlive = true;
@@ -4095,7 +4097,7 @@ void NodeService::Loop() {
       nodeServiceIsAlive = uv_loop_alive(nodeServiceTickEnv->event_loop());
     }
   });
-}
+} */
 
 v8::Isolate *NodeService::GetIsolate() {
   return isolate;
