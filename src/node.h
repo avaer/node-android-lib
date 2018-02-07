@@ -63,7 +63,7 @@
 #include "v8.h"  // NOLINT(build/include_order)
 #include "v8-platform.h"  // NOLINT(build/include_order)
 #include "node_version.h"  // NODE_MODULE_VERSION
-#include "uv.h"
+#include "../deps/uv/include/uv.h"
 
 #define NODE_MAKE_VERSION(major, minor, patch)                                \
   ((major) * 0x1000 + (minor) * 0x100 + (patch))
