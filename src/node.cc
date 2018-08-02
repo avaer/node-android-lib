@@ -2426,6 +2426,7 @@ static MaybeLocal<Function> GetBootstrapper(
     Local<String> script_name) {
   EscapableHandleScope scope(env->isolate());
 
+
   TryCatch try_catch(env->isolate());
 
   // Disable verbose mode to stop FatalException() handler from trying

@@ -315,11 +315,8 @@ CARES_EXTERN int ares_library_init_mem(int flags,
 CARES_EXTERN void ares_library_init_jvm(JavaVM *jvm);
 CARES_EXTERN int ares_library_init_android(jobject connectivity_manager);
 CARES_EXTERN int ares_library_android_initialized(void);
-<<<<<<< HEAD
-=======
 CARES_EXTERN char **ares_get_android_server_list(size_t max_servers, size_t *num_servers);
 CARES_EXTERN void ares_library_cleanup_android(void);
->>>>>>> Update c-ares lib dep
 #endif
 
 CARES_EXTERN int ares_library_initialized(void);

@@ -1647,7 +1647,7 @@ static int init_by_resolv_conf(ares_channel channel)
     }
     ares_free(dns_servers);
   }
-<<<<<<< HEAD
+
 
 #  ifdef HAVE___SYSTEM_PROPERTY_GET
   /* Old way using the system property still in place as
@@ -1665,7 +1665,7 @@ static int init_by_resolv_conf(ares_channel channel)
         break;
       }
 
-=======
+
 
 #  ifdef HAVE___SYSTEM_PROPERTY_GET
   /* Old way using the system property still in place as
@@ -1683,7 +1683,7 @@ static int init_by_resolv_conf(ares_channel channel)
         break;
       }
 
->>>>>>> Update c-ares lib dep
+
       status = config_nameserver(&servers, &nservers, propvalue);
       if (status != ARES_SUCCESS)
         break;
