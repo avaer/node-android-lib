@@ -9,28 +9,18 @@
 # 'npm config set arch=<arch>'
 
 
-if [ -z "$2" ]; then
-    ARCH=arm
-else
+ if [ -z "$2" ]; then
+    ARCH=arm64
+ else
     ARCH="$2"
-fi
+ fi
 
 CC_VER="4.9"
 case $ARCH in
-    arm)
+    arm64)
         DEST_CPU="$ARCH"
-        SUFFIX="$ARCH-linux-androideabi"
+        SUFFIX="aarch64-linux-android"
         TOOLCHAIN_NAME="$SUFFIX"
-        ;;
-    x86)
-        DEST_CPU="ia32"
-        SUFFIX="i686-linux-android"
-        TOOLCHAIN_NAME="$ARCH"
-        ;;
-    x86_64)
-        DEST_CPU="ia32"
-        SUFFIX="$ARCH-linux-android"
-        TOOLCHAIN_NAME="$ARCH"
         ;;
     *)
         echo "Unsupported architecture provided: $ARCH"
@@ -42,9 +32,10 @@ NDK_PATH=$1
 function make_toolchain {
     $NDK_PATH/build/tools/make-standalone-toolchain.sh \
          --toolchain=$TOOLCHAIN_NAME-$CC_VER \
-        --arch=$ARCH \
+        --arch=arm64 \
         --install-dir=$TOOLCHAIN \
-        --platform=android-21
+	--stl=libc++ \
+        --platform=android-23
 }
 
 export TOOLCHAIN=$PWD/android-toolchain
@@ -60,9 +51,9 @@ else
 fi
 export PATH=$TOOLCHAIN/bin:$PATH
 export AR=$TOOLCHAIN/bin/$SUFFIX-ar
-export CC=$TOOLCHAIN/bin/$SUFFIX-gcc
-export CXX=$TOOLCHAIN/bin/$SUFFIX-g++
-export LINK=$TOOLCHAIN/bin/$SUFFIX-g++
+export CC=$TOOLCHAIN/bin/$SUFFIX-clang
+export CXX=$TOOLCHAIN/bin/$SUFFIX-clang++
+export LINK=$TOOLCHAIN/bin/$SUFFIX-clang++
 
 GYP_DEFINES="target_arch=$ARCH"
 GYP_DEFINES+=" v8_target_arch=$ARCH"
@@ -72,8 +63,11 @@ export GYP_DEFINES
 
 if [ -f "configure" ]; then
     ./configure \
+	--cross-compiling \
         --dest-cpu=$DEST_CPU \
         --dest-os=android \
         --without-snapshot \
-        --openssl-no-asm
+	--without-intl \
+        --openssl-no-asm \
+	--shared
 fi

@@ -15,12 +15,12 @@
  */
 #include "ares_setup.h"
 
-#ifdef HAVE_GETSERVBYPORT_R
-#  if !defined(GETSERVBYPORT_R_ARGS) || \
-     (GETSERVBYPORT_R_ARGS < 4) || (GETSERVBYPORT_R_ARGS > 6)
-#    error "you MUST specifiy a valid number of arguments for getservbyport_r"
-#  endif
-#endif
+//#ifdef HAVE_GETSERVBYPORT_R
+//#  if !defined(GETSERVBYPORT_R_ARGS) || \
+//     (GETSERVBYPORT_R_ARGS < 4) || (GETSERVBYPORT_R_ARGS > 6)
+//#    error "you MUST specifiy a valid number of arguments for getservbyport_r"
+//#  endif
+//#endif
 
 #ifdef HAVE_NETINET_IN_H
 #  include <netinet/in.h>
@@ -277,9 +277,9 @@ static char *lookup_service(unsigned short port, int flags,
 {
   const char *proto;
   struct servent *sep;
-#ifdef HAVE_GETSERVBYPORT_R
-  struct servent se;
-#endif
+//#ifdef HAVE_GETSERVBYPORT_R
+//  struct servent se;
+//#endif
   char tmpbuf[4096];
   char *name;
   size_t name_len;
@@ -298,32 +298,32 @@ static char *lookup_service(unsigned short port, int flags,
             proto = "dccp";
           else
             proto = "tcp";
-#ifdef HAVE_GETSERVBYPORT_R
-          memset(&se, 0, sizeof(se));
-          sep = &se;
-          memset(tmpbuf, 0, sizeof(tmpbuf));
-#if GETSERVBYPORT_R_ARGS == 6
-          if (getservbyport_r(port, proto, &se, (void *)tmpbuf,
-                              sizeof(tmpbuf), &sep) != 0)
-            sep = NULL;  /* LCOV_EXCL_LINE: buffer large so this never fails */
-#elif GETSERVBYPORT_R_ARGS == 5
-          sep = getservbyport_r(port, proto, &se, (void *)tmpbuf,
-                                sizeof(tmpbuf));
-#elif GETSERVBYPORT_R_ARGS == 4
-          if (getservbyport_r(port, proto, &se, (void *)tmpbuf) != 0)
-            sep = NULL;
-#else
+//#ifdef HAVE_GETSERVBYPORT_R
+//          memset(&se, 0, sizeof(se));
+//          sep = &se;
+//          memset(tmpbuf, 0, sizeof(tmpbuf));
+//#if GETSERVBYPORT_R_ARGS == 6
+//          if (getservbyport_r(port, proto, &se, (void *)tmpbuf,
+//                              sizeof(tmpbuf), &sep) != 0)
+//            sep = NULL;  /* LCOV_EXCL_LINE: buffer large so this never fails */
+//#elif GETSERVBYPORT_R_ARGS == 5
+//          sep = getservbyport_r(port, proto, &se, (void *)tmpbuf,
+//                                sizeof(tmpbuf));
+//#elif GETSERVBYPORT_R_ARGS == 4
+//          if (getservbyport_r(port, proto, &se, (void *)tmpbuf) != 0)
+//            sep = NULL;
+//#else
           /* Lets just hope the OS uses TLS! */
           sep = getservbyport(port, proto);
-#endif
-#else
+//#endif
+//#else
           /* Lets just hope the OS uses TLS! */
 #if (defined(NETWARE) && !defined(__NOVELL_LIBC__))
           sep = getservbyport(port, (char*)proto);
 #else
           sep = getservbyport(port, proto);
 #endif
-#endif
+//#endif
         }
       if (sep && sep->s_name)
         {
